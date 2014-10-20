@@ -92,12 +92,13 @@ class ResumeImport(EC2Request, S3AccessMixin, FileTransferProgressBarMixin):
             vol_container = task['importInstance']['volumes'][0]
         file_size = euca2ools.util.get_filesize(self.args['source'])
         manifest = self.__get_or_create_manifest(vol_container, file_size)
-        file_size_from_manifest = manifest.image_parts[len(manifest.image_parts)-1].end + 1
+        file_size_from_manifest = manifest.image_parts[len(
+                                manifest.image_parts)-1].end + 1
         if file_size_from_manifest != file_size:
             raise ArgumentError(
                 'file "{0}" is not the same size as the file the import '
                 'started with (expected: {1}, actual: {2})'
-                .format(self.args['source'], file_size_from_manifest, file_size))
+                .format(self.args['source'],file_size_from_manifest,file_size))
 
         # Now we have a manifest; check to see what parts are already uploaded
         _, bucket, _ = self.args['s3_service'].resolve_url_to_location(

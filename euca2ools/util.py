@@ -129,9 +129,10 @@ def get_filesize(filename):
 
 def get_vmdk_image_size(filename):
     if get_filesize(filename) < 1024:
-        raise ValueError('File {0} is to small to be a valid Stream Optimized VMDK'
-                         .format(filename))
-    # see https://www.vmware.com/support/developer/vddk/vmdk_50_technote.pdf for header/footer format
+        raise ValueError('File {0} is to small to be a valid Stream'
+                         ' Optimized VMDK'.format(filename))
+    # see https://www.vmware.com/support/developer/vddk/vmdk_50_technote.pdf
+    # for header/footer format
     with open(filename, 'rb') as f:
         data = struct.unpack('<iiiqqqqiqqq?bbbbh433c', f.read(512))
         if data[9] & 0xffffffffffffffff == 0:

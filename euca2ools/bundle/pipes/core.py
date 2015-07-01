@@ -32,19 +32,30 @@ import tarfile
 import euca2ools.bundle.util
 from euca2ools.bundle.util import close_all_fds
 
+REPORT_CHUNK_SIZE = 1024 * 1024 * 10 # 10 MB
 
 def create_bundle_pipeline(infile, outfile, enc_key, enc_iv, tarinfo,
-                           debug=False):
+                           debug=False, logger=None):
     pids = []
 
-    # infile -> tar
+    # infile -> progress
+    progress_in_r, progress_in_w = euca2ools.bundle.util.open_pipe_fileobjs()
+    progress_p = multiprocessing.Process(target=_copy_with_progress,
+                                    args=(infile, progress_in_w, logger),
+                                    kwargs={'debug': debug})
+    progress_p.start()
+    pids.append(progress_p.pid)
+    infile.close()
+    progress_in_w.close()
+
+    # progress -> tar
     tar_out_r, tar_out_w = euca2ools.bundle.util.open_pipe_fileobjs()
     tar_p = multiprocessing.Process(target=_create_tarball_from_stream,
-                                    args=(infile, tar_out_w, tarinfo),
+                                    args=(progress_in_r, tar_out_w, tarinfo),
                                     kwargs={'debug': debug})
     tar_p.start()
     pids.append(tar_p.pid)
-    infile.close()
+    progress_in_r.close()
     tar_out_w.close()
 
     # tar -> sha1sum
@@ -178,6 +189,38 @@ def copy_with_progressbar(infile, outfile, progressbar=None):
     finally:
         if progressbar:
             progressbar.finish()
+        infile.close()
+    return bytes_written
+
+
+def _copy_with_progress(infile, outfile, logger=None, debug=False):
+    """
+    Synchronously copy data from infile to outfile, writing to the logger
+    the total number of bytes copied along the way if one was provided,
+    and return the number of bytes copied.
+
+    :param infile: file obj to read input from
+    :param outfile: file obj to write output to
+    """
+    bytes_written = 0
+    close_all_fds(except_fds=[infile, outfile])
+    try:
+        while not infile.closed:
+            chunk = infile.read(euca2ools.BUFSIZE)
+            if chunk:
+                outfile.write(chunk)
+                outfile.flush()
+                bytes_written += len(chunk)
+                if logger and (bytes_written % REPORT_CHUNK_SIZE == 0):
+                    logger.debug("Bytes read from source: {0}".format(bytes_written))
+            else:
+                break
+    except IOError:
+        # HACK
+        if not debug:
+            return
+        raise
+    finally:
         infile.close()
     return bytes_written
 

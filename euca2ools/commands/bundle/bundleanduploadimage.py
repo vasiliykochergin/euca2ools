@@ -142,7 +142,7 @@ class BundleAndUploadImage(S3Request, BundleCreatingMixin,
             euca2ools.bundle.util.open_pipe_fileobjs()
         digest_result_mpconn = create_bundle_pipeline(
             self.args['image'], partwriter_in_w, self.args['enc_key'],
-            self.args['enc_iv'], tarinfo, debug=self.debug)
+            self.args['enc_iv'], tarinfo, logger=self.log, debug=self.debug)
         partwriter_in_w.close()
 
         # bundler --(bytes)-> part writer

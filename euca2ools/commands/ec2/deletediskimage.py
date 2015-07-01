@@ -36,7 +36,6 @@ from euca2ools.commands.ec2.structures import ImportManifest
 from euca2ools.commands.s3.deleteobject import DeleteObject
 from euca2ools.commands.s3.getobject import GetObject
 from euca2ools.exceptions import AWSError
-import sys
 
 
 class DeleteDiskImage(EC2Request, S3AccessMixin):
@@ -97,8 +96,8 @@ class DeleteDiskImage(EC2Request, S3AccessMixin):
                 get_req.main()
             except AWSError as err:
                 if err.status_code == 404:
-                    print "The manifest file does not exist. Nothing to delete."
-                    sys.exit(0)
+                    raise ArgumentError('import manifest "{0}" does not exist'
+                                        .format(s3path))
                 raise
             manifest_destfile.seek(0)
             return ImportManifest.read_from_fileobj(manifest_destfile)
